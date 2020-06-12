@@ -1,79 +1,103 @@
-import java.util.*;import java.io.*;import java.math.*;
-//
-//  getMafAln.java
-//  
-//
-//  Created by Martin Smith on 7/07/09.
-//  Copyright 2009 __MyCompanyName__. All rights reserved.
-//
+import java.util.*;import java.io.*;
+/**
+ * This program filters multiple sequence alignments and remove duplicates species within alignment blocks
+ * @author Martin Smith on 7/07/09
+ * Modified by Vanda Gaonach-Lovejoy 05/06/20
+ * Copyright 2009 __MyCompanyName__. All rights reserved.
+ */
 
 public class MergeNFilter {
-	public static void main(String[] Args) throws IOException {
-		int input = 0 ; 
-		BufferedWriter SegDups=new BufferedWriter(new FileWriter( Args[0].substring(0,Args[0].lastIndexOf("_"))+"_segmtl_dups.txt") );
-		BufferedWriter Out = new BufferedWriter(new FileWriter( Args[0].substring(0, Args[0].lastIndexOf("_")) +".maf"));;
-		Out.write("##maf version=1 \n"+
-				"# original dump date: Sun Jul 25 07:08:34 2010\n# ensembl release: 59\n"+
-				"# emf comment: Alignments: 11 eutherian mammals EPO\n# emf comment: Region: Homo sapiens chromosome:GRCh37\n"); 
-		
-		while ( input != Args.length ) {
-			String File = Args[ input ] ;
-			BufferedReader Entry = new BufferedReader(new FileReader( File ));
-			String Line ;
-			while  ( (Line = Entry.readLine() ) != null  ) {
-				if ( Line.length() != 0  && Line.charAt(0) == 'a' ) {
-					Out.write( Line); 
-				}
-				else if ( Line.length() != 0  && Line.charAt(0) == 's'){
-					String [][] Spps = new String [50][6];
-					String[] SpHead = new String[50] ; 					
-					int i = 0 ; 
-					while ( Line.length() != 0 && Line.charAt(0) == 's'  ) {
-						Spps[i] = Line.split("\\s+"); 
-						for (int j = 0 ; Spps[i][1].toString().charAt(j) != '.' ; j++ ) 
-							SpHead[i] = SpHead[i] + Spps[i][1].toString().charAt(j) ;
-						i++ ; 
-						Line = Entry.readLine() ; 
-						if (Line == null) 
-							System.exit(0) ; 
-					}
-					terminate: for (int x = 0 ; x != SpHead.length && SpHead[x] != null ; x++ ) {
-						boolean printIt = true ;
-						if (x == 0) {  
-							SegDups.write("\na score=0\n"); 
-							for (int col = 0 ; col != 6 ; col++ )
-								SegDups.write( Spps[0][col]+"\t" ) ; 
-							SegDups.write(Spps[0][6]+"\n"); 
-						}
-						
-						for (int y = 0 ; y != x ; y++ ) {
-							//System.out.println(SpHead[x]) ; 
-							if ( SpHead[x].equals( SpHead[y] ) ) {
-								printIt = false ; 
-								for (int col = 0 ; col != 6 ; col++ )
-									//include sequence or not???
-									SegDups.write( Spps[x][col]+"\t" ) ; 
-								SegDups.write(Spps[x][6]+"\n"); 
-								continue terminate ;
-							}
-						}
-						if ( printIt ) {
-							for (int col = 0 ; col != 6 ; col++ )
-								Out.write( Spps[x][col]+"\t" ) ; 
-							Out.write( Spps[x][6]+"\n") ; 
-						}
-						
-						
-					}
-				}
-				Out.write("\n");
 
-			}
-			input++ ;	
-			Entry.close() ; 
+	public static void main(String[] args) throws IOException {
+
+
+		if (args.length == 0) {
+			System.out.println("Warning: maf files are expected");
+			System.exit(-1);
 		}
-		Out.close(); 
-		SegDups.close(); 
-		
+
+		try {
+
+			int input = 0;
+			BufferedWriter segDups = new BufferedWriter(new FileWriter(args[0].substring(0,
+					args[0].lastIndexOf("_")) + "_segmtl_dups.txt"));
+			BufferedWriter out = new BufferedWriter(new FileWriter(args[0].substring(0, args[0].lastIndexOf(
+					"_")) + ".maf"));
+			;
+			out.write("##maf version=1 \n" +
+					"# original dump date: Fri Jun 05 14:22:00 2020\n# ensembl release: 59\n" +
+					"# emf comment: Alignments: 11 eutherian mammals EPO\n# emf comment: Region:" +
+					" Homo sapiens chromosome:GRCh37\n");
+
+			while (input != args.length) {
+				String file = args[input];
+				BufferedReader entry = new BufferedReader(new FileReader(file));
+				String line;
+				while ((line = entry.readLine()) != null) {
+
+					if (line.length() != 0 && line.charAt(0) == 'a') {
+						out.write(line);
+					} else if (line.length() != 0 && line.charAt(0) == 's') {
+						LinkedHashMap<String, String[]> speciesSequences = new LinkedHashMap<>();
+						ArrayList<String[]> duplicateSequences = new ArrayList<>();
+						while (line.length() != 0 && line.charAt(0) == 's') {
+							String[] arraySequenceInfo = line.split("\\s+");
+							String nameSpeciesWithChro = arraySequenceInfo[1];
+							String nameSpeciesOnly = nameSpeciesWithChro.substring(0,
+									nameSpeciesWithChro.indexOf("."));
+							if (!nameSpeciesOnly.equals("ancestral_sequences")) {
+								if (!(speciesSequences.containsKey(nameSpeciesOnly))) {
+									speciesSequences.put(nameSpeciesOnly, arraySequenceInfo);
+								} else {
+									if (duplicateSequences.size() == 0) {
+										duplicateSequences.add(speciesSequences.get("homo_sapiens"));
+									}
+									duplicateSequences.add(arraySequenceInfo);
+								}
+							}
+							line = entry.readLine();
+							if (line == null)
+								System.exit(0);
+						}
+
+
+						for (int i = 0; i < duplicateSequences.size(); i++) {
+							String[] arraySpecies = duplicateSequences.get(i);
+							if (i == 0) {
+								segDups.write("\na score=0\n");
+							}
+							String stringSpecies = Arrays.toString(arraySpecies);
+							String noBrackets = stringSpecies.replace("[", "")
+									.replace("]", "")
+									.replace(",", "\t");
+
+
+							segDups.write(noBrackets + "\n");
+						}
+
+
+						for (String key : speciesSequences.keySet()) {
+							String[] value = speciesSequences.get(key);
+							String eachSpeciesInfo = Arrays.toString(value);
+
+							//remove the right and left bracket
+							String noBrackets = eachSpeciesInfo.replace("[", "")
+									.replace("]", "")
+									.replace(",", "\t");
+							out.write(noBrackets + "\n");
+						}
+					}
+					out.write("\n");
+				}
+				input++;
+				entry.close();
+			}
+
+			out.close();
+			segDups.close();
+
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 }

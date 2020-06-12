@@ -2,11 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-<<<<<<< HEAD
-      <module fileurl="file://$PROJECT_DIR$/MergeNFilter2.iml" filepath="$PROJECT_DIR$/MergeNFilter2.iml" />
-=======
       <module fileurl="file://$PROJECT_DIR$/Allo.iml" filepath="$PROJECT_DIR$/Allo.iml" />
->>>>>>> origin/VandaModifications
     </modules>
   </component>
 </project>
